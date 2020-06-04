@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"flag"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -15,11 +16,10 @@ const tmpfile = "models.sqlite"
 func main() {
 	logrus.SetOutput(os.Stderr)
 
-	out := "models"
-	if len(os.Args) > 1 {
-		out = os.Args[1]
-	}
-	logrus.Println(out)
+	out := flag.String("o", "models", "Set output directly")
+	sql := flag.String("sql", "schema.sql", "Set schema SQL file")
+	pkg := flag.String("pkg", "models", "Set pkg name")
+	flag.Parse()
 
 	dir, err := ioutil.TempDir("", "")
 	if err != nil {
@@ -30,7 +30,12 @@ func main() {
 
 	var buf bytes.Buffer
 	sqlite := exec.Command("sqlite3", filepath.Join(dir, tmpfile))
-	sqlite.Stdin = os.Stdin
+	f, err := os.Open(*sql)
+	if err != nil {
+		logrus.Error("Failed to open sql file:\n")
+		return
+	}
+	sqlite.Stdin = f
 	sqlite.Stdout = ioutil.Discard
 	sqlite.Stderr = &buf
 	if err := sqlite.Run(); err != nil {
@@ -40,8 +45,9 @@ func main() {
 
 	buf.Reset()
 
-	sqlboiler := exec.Command("sqlboiler", "sqlite3", "--output", out, "--wipe")
-	sqlboiler.Env = append(os.Environ(), "SQLITE3_DBNAME="+filepath.Join(dir, tmpfile))
+	os.Setenv("SQLITE3_DBNAME", filepath.Join(dir, tmpfile))
+	sqlboiler := exec.Command("sqlboiler", "sqlite3", "--output", *out, "--wipe", "--pkgname", *pkg)
+	sqlboiler.Env = append(sqlboiler.Env, os.Environ()...)
 	sqlboiler.Stdin = os.Stdin
 	sqlboiler.Stdout = os.Stdout
 	sqlboiler.Stderr = &buf
