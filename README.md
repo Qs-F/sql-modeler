@@ -15,6 +15,7 @@ You can also define MySQL schema by using https://github.com/dumblob/mysql2sqlit
 ## Acknowledgements
 
 - `testdata/schema.sql` is retrieved from https://github.com/mattn/sqlboiler-example
+- `_example/schema.sql` and `_example/main.go` are retrieved from https://github.com/mattn/sqlboiler-example
 
 ## License
 
